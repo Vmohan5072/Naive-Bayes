@@ -1,38 +1,29 @@
 import os
-import string
+from flask import Flask, request, render_template
 import pandas as pd
+import math
+import string
 import nltk
 from nltk.stem import PorterStemmer
-import math
 
-# Download NLTK data if necessary
 nltk.download('punkt')
 
-# Initialize the Porter Stemmer
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+
 stemmer = PorterStemmer()
 
 def preprocess_text(text):
-    """
-    Preprocesses the text by tokenizing, converting to lowercase, removing punctuation,
-    and stemming each word.
-    """
     text = text.translate(str.maketrans('', '', string.punctuation))
     words = nltk.word_tokenize(text.lower())
     stemmed_words = [stemmer.stem(word) for word in words]
     return stemmed_words
 
 def load_training_data():
-    """
-    Loads trainingdata.csv into a Pandas DataFrame.
-    """
     df = pd.read_csv('trainingdata.csv')
     return df
 
 def train_naive_bayes(training_data):
-    """
-    Trains a Naive Bayes classifier based on the training data.
-    Returns dictionaries of word probabilities for spam and ham, and prior probabilities.
-    """
     total_spam = training_data['Spam Count'].sum()
     total_ham = training_data['Ham Count'].sum()
     total_words = training_data['Total Count'].sum()
@@ -58,10 +49,6 @@ def train_naive_bayes(training_data):
     return spam_probabilities, ham_probabilities, prior_spam, prior_ham
 
 def classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam, prior_ham):
-    """
-    Classifies the given email text as spam or ham using Naive Bayes.
-    Returns 'spam' or 'ham' and the probability of being spam.
-    """
     words = preprocess_text(email_text)
     
     log_prob_spam = prior_spam
@@ -81,25 +68,28 @@ def classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam
     else:
         return 'ham', prob_ham
 
-def main():
-    # Load training data
-    training_data = load_training_data()
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    result = None
+    probability = None
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return 'No file part'
+        file = request.files['file']
+        if file.filename == '':
+            return 'No selected file'
+        if file:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(file_path)
+            with open(file_path, 'r', encoding='latin-1') as f:
+                email_text = f.read()
+            
+            training_data = load_training_data()
+            spam_probabilities, ham_probabilities, prior_spam, prior_ham = train_naive_bayes(training_data)
+            result, probability = classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam, prior_ham)
+            probability = round(probability, 3)
 
-    # Train Naive Bayes classifier
-    spam_probabilities, ham_probabilities, prior_spam, prior_ham = train_naive_bayes(training_data)
+    return render_template('index.html', result=result, probability=probability)
 
-    # Example email file path
-    email_file = 'test.txt'
-
-    # Read email text
-    with open(email_file, 'r', encoding='latin-1') as f:
-        email_text = f.read()
-
-    # Classify the email
-    classification, probability = classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam, prior_ham)
-
-    # Print classification result
-    print(f"The email is classified as {classification} with a probability of {probability:.3f}")
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(debug=True)
