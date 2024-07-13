@@ -17,9 +17,16 @@ from datetime import datetime
 
 nltk.download('punkt')
 
+if os.path.exists('trainingdata.csv'):
+    df = pd.read_csv('trainingdata.csv')
+else:
+    #if file is nonexistant
+    print("Training data not found. Please run training.py first.")
+    df = pd.DataFrame()  
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['SECRET_KEY'] = 'sample_secret_key' 
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
 stemmer = PorterStemmer()
 
@@ -330,4 +337,5 @@ def view_log():
     return render_template('log.html', logs=logs)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
