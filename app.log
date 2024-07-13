@@ -1,0 +1,12 @@
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with watchdog (windowsapi)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 348-563-709
+INFO:werkzeug:127.0.0.1 - - [12/Jul/2024 22:38:45] "[31m[1mGET / HTTP/1.1[0m" 401 -
+INFO:werkzeug: * Detected change in 'C:\\Users\\Yogesh\\anaconda3\\Lib\\typing.py', reloading
+INFO:werkzeug: * Restarting with watchdog (windowsapi)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 348-563-709
+INFO:werkzeug:127.0.0.1 - - [12/Jul/2024 22:40:55] "GET / HTTP/1.1" 200 -

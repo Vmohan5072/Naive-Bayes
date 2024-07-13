@@ -4,32 +4,187 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Spam Classifier</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.3/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-upload-container, .interactive-queries {
+            max-width: 600px;
+            margin: 0 auto 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .file-input-wrapper, form {
+            margin-bottom: 15px;
+        }
+        input[type="file"], input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .results, #word-search-result, #classification-result {
+            margin-top: 20px;
+        }
+        .chart-container {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- ... [keep existing head content] ... -->
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Email Spam Classifier</h1>
-        <div class="row justify-content-center mt-4">
-            <div class="col-md-6">
-                <form method="POST" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="file">Upload Email File</label>
-                        <input type="file" class="form-control-file" id="file" name="file">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Classify Email</button>
-                </form>
-                {% if result %}
-                    <div class="mt-4">
-                        <h4 class="text-center">Classification Result: {{ result }}</h4>
-                        <p class="text-center">Spam Probability: {{ probability }}</p>
-                    </div>
-                {% endif %}
+    <div class="email-upload-container">
+        <h1>Email Spam Classifier</h1>
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            <div class="file-input-wrapper">
+                <label for="file-upload">Upload Email Files</label>
+                <input type="file" id="file-upload" name="file" multiple>
             </div>
+            <button type="submit">Classify Emails</button>
+        </form>
+        
+        {% if results %}
+        <div class="results">
+            <h3>Classification Results:</h3>
+            <ul>
+            {% for result, probability, filename in results %}
+                <li><strong>{{ filename }}:</strong> {{ result }} (Spam Probability: {{ probability }})</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if accuracy_metrics %}
+        <div class="accuracy-metrics">
+            <h3>Accuracy Metrics:</h3>
+            <ul>
+                <li>Precision: {{ accuracy_metrics.precision }}</li>
+                <li>Recall: {{ accuracy_metrics.recall }}</li>
+                <li>F1 Score: {{ accuracy_metrics.f1_score }}</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <h3>Classify Custom Text</h3>
+        <form id="text-classification-form">
+            <textarea id="classify-text" placeholder="Enter text to classify"></textarea>
+            <button type="submit">Classify</button>
+        </form>
+        <div id="classification-result"></div>
+
+        <h3>Word Search</h3>
+        <form id="word-search-form">
+            <input type="text" id="search-word" placeholder="Enter a word to search">
+            <button type="submit">Search</button>
+        </form>
+        <div id="word-search-result"></div>
+
+        <div class="monitoring">
+            <h3>Monitoring</h3>
+            <a href="/log">View Application Logs</a>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <div class="chart-container">
+        <h2>Data Visualizations</h2>
+        <div id="word-frequency-chart"></div>
+    </div>
+
+    <div class="chart-container">
+        <div id="scatter-plot"></div>
+    </div>
+
+    <div class="chart-container">
+        <div id="pie-chart"></div>
+    </div>
+
+    <script>
+        function safeJsonParse(jsonString, chartName) {
+            try {
+                return JSON.parse(jsonString);
+            } catch (e) {
+                console.error(`Error parsing JSON for ${chartName}:`, e);
+                console.log(`Problematic JSON string for ${chartName} (first 1000 characters):`, jsonString.slice(0, 1000));
+                return null;
+            }
+        }
+
+        // Render charts
+        var wordFreqData = safeJsonParse('{{ charts.word_frequency | safe }}', 'word frequency chart');
+        if (wordFreqData) Plotly.newPlot('word-frequency-chart', wordFreqData);
+        else console.error("Failed to render word frequency chart");
+
+        var scatterData = safeJsonParse('{{ charts.scatter_plot | safe }}', 'scatter plot');
+        if (scatterData) Plotly.newPlot('scatter-plot', scatterData);
+        else console.error("Failed to render scatter plot");
+
+        var pieData = safeJsonParse('{{ charts.pie_chart | safe }}', 'pie chart');
+        if (pieData) Plotly.newPlot('pie-chart', pieData);
+        else console.error("Failed to render pie chart");
+
+        // Word search
+        document.getElementById('word-search-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var word = document.getElementById('search-word').value;
+            fetch('/search_word', {
+                method: 'POST',
+                body: new URLSearchParams({'word': word}),
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                var resultDiv = document.getElementById('word-search-result');
+                if (data.error) {
+                    resultDiv.innerHTML = data.error;
+                } else if (data.message) {
+                    // Multiple results
+                    let html = `<p>${data.message}</p><ul>`;
+                    data.results.forEach(result => {
+                        html += `<li>Word: ${result.Word}, Spam Count: ${result['Spam Count']}, Ham Count: ${result['Ham Count']}, Spam Ratio: ${result['Spam Ratio']}</li>`;
+                    });
+                    html += '</ul>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    // Single result
+                    resultDiv.innerHTML = `Original Word: ${data['Original Word']}<br>Stemmed Word: ${data.Word}<br>Spam Count: ${data['Spam Count']}<br>Ham Count: ${data['Ham Count']}<br>Spam Ratio: ${data['Spam Ratio']}`;
+                }
+            });
+        });
+
+        // Text classification
+        document.getElementById('text-classification-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var text = document.getElementById('classify-text').value;
+            fetch('/classify_text', {
+                method: 'POST',
+                body: new URLSearchParams({'text': text}),
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('classification-result').innerHTML = `Classification: ${data.result}, Probability: ${data.probability}`;
+            });
+        });
+    </script>
 </body>
 </html>
