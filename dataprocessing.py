@@ -23,10 +23,10 @@ app.config['SECRET_KEY'] = 'sample_secret_key'
 
 stemmer = PorterStemmer()
 
-# Set up logging
+#logs
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
-#User database
+#user login database 
 users = {
     "admin": generate_password_hash("admin_password")
 }
@@ -54,7 +54,7 @@ def preprocess_text(text):
     words = nltk.word_tokenize(text.lower())
     stemmed_words = [stemmer.stem(word) for word in words]
     text = re.sub(r'[^\x00-\x7F]+', ' ', text) #remove corrupted characters
-    text = re.sub(r'\s+', ' ', text).strip() #whitespace
+    text = re.sub(r'\s+', ' ', text).strip() #remove whitespace
     return stemmed_words
 
 def load_training_data():
@@ -118,7 +118,7 @@ def classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam
 
     print(f"Final probabilities: Spam {prob_spam}, Ham {prob_ham}")
 
-    if prob_spam > 0.95:
+    if prob_spam > 0.90:
         return 'spam', prob_spam
     else:
         return 'ham', prob_spam
@@ -160,12 +160,10 @@ def sanitize_string(s):
 
 def create_scatter_plot(training_data):
     try:
-        # Filter out any rows with non-numeric data
         numeric_data = training_data[training_data['Ham Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Ratio'].apply(lambda x: isinstance(x, (int, float)))]
         
-        # Convert to list and handle potential NaN values
         x = numeric_data['Ham Count'].fillna(0).tolist()
         y = numeric_data['Spam Count'].fillna(0).tolist()
         text = [sanitize_string(word) for word in numeric_data['Word'].fillna('').tolist()]
@@ -195,16 +193,16 @@ def create_scatter_plot(training_data):
         fig = go.Figure(data=[trace], layout=layout)
         json_data = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
-        # Additional sanitization of the JSON string
+        # cleaning of the JSON string
         json_data = sanitize_string(json_data)
         
-        # Check for potential issues in the JSON string
-        json.loads(json_data)  # This will raise an error if the JSON is invalid
+
+        json.loads(json_data)  # error checking for json
         
         return json_data
     except Exception as e:
         print(f"Error in create_scatter_plot: {e}")
-        # Return a simplified version of the chart if there's an error
+        #Failsafe chart
         return json.dumps({
             "data": [{"x": [0], "y": [0], "type": "scatter", "mode": "markers"}],
             "layout": {"title": "Error in Scatter Plot"}
@@ -264,13 +262,11 @@ def index():
                 result, probability = classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam, prior_ham)
                 probability = round(probability, 3)
                 results.append((result, probability, file.filename))
-
-                # Assume the true label is in the filename (e.g., "spam_email.txt" or "ham_email.txt")
                 true_label = 'spam' if 'spam' in file.filename.lower() else 'ham'
                 true_labels.append(true_label)
                 predicted_labels.append(result)
 
-        # Calculate accuracy metrics
+        #Accuracy
         precision, recall, f1 = evaluate_accuracy(true_labels, predicted_labels)
         accuracy_metrics = {
             'precision': round(precision, 3),
@@ -278,10 +274,10 @@ def index():
             'f1_score': round(f1, 3)
         }
 
-        # Log the classification activity
+        #Logging activity
         logging.info(f"{datetime.now()} - Classified {len(files)} emails. Accuracy metrics: {accuracy_metrics}")
 
-    # Create visualizations
+    #Visualizations
     charts['word_frequency'] = create_word_frequency_bar_chart(training_data)
     charts['scatter_plot'] = create_scatter_plot(training_data)
     charts['pie_chart'] = create_pie_chart(training_data)
@@ -291,15 +287,15 @@ def index():
 @app.route('/search_word', methods=['POST'])
 def search_word():
     word = request.form['word']
-    stemmed_word = stemmer.stem(word.lower())  # Stem the search word
+    stemmed_word = stemmer.stem(word.lower())
     training_data = load_training_data()
     word_data = training_data[training_data['Word'] == stemmed_word]
     if not word_data.empty:
         result = word_data.to_dict('records')[0]
-        result['Original Word'] = word  # Include the original word in the result
+        result['Original Word'] = word
         return jsonify(result)
     
-    # If exact stem not found, search for words that contain the stemmed word
+    # Search stems if main word is not found
     containing_words = training_data[training_data['Word'].str.contains(stemmed_word, case=False, na=False)]
     if not containing_words.empty:
         results = containing_words.to_dict('records')
