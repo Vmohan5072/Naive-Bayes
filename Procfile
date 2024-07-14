@@ -1,1 +1,1 @@
-web: gunicorn dataprocessing:app --log-file -
+web: pip install -r requirements.txt && gunicorn dataprocessing:app

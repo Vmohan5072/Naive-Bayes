@@ -1,0 +1,16 @@
+name: naive-bayes-spam-filter
+   channels:
+     - defaults
+     - conda-forge
+   dependencies:
+     - python=3.12.4
+     - flask=2.3.2
+     - pandas=2.0.3
+     - nltk=3.8.1
+     - scikit-learn=1.3.0
+     - plotly=5.15.0
+     - gunicorn=20.1.0
+     - werkzeug=2.3.6
+     - pip
+     - pip:
+       - nltk==3.8.1
