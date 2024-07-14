@@ -65,7 +65,11 @@ def preprocess_text(text):
     return stemmed_words
 
 def load_training_data():
-    df = pd.read_csv('trainingdata.csv')
+    try:
+        df = pd.read_csv('trainingdata.csv')
+    except FileNotFoundError:
+        print("Training data not found. Initializing with empty DataFrame.")
+        df = pd.DataFrame(columns=['Word', 'Ham Count', 'Spam Count', 'Total Count', 'Spam Ratio'])
     return df
 
 def train_naive_bayes(training_data):
@@ -337,5 +341,5 @@ def view_log():
     return render_template('log.html', logs=logs)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+       port = int(os.environ.get('PORT', 5000))
+       app.run(host='0.0.0.0', port=port)

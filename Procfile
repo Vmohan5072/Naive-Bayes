@@ -1,1 +1,1 @@
-web: gunicorn dataprocessing:app
+web: gunicorn dataprocessing:app --log-file -
