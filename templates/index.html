@@ -130,7 +130,7 @@
             }
         }
 
-        // Render charts
+        //Create three charts
         var wordFreqData = safeJsonParse('{{ charts.word_frequency | safe }}', 'word frequency chart');
         if (wordFreqData) Plotly.newPlot('word-frequency-chart', wordFreqData);
         else console.error("Failed to render word frequency chart");
@@ -143,7 +143,6 @@
         if (pieData) Plotly.newPlot('pie-chart', pieData);
         else console.error("Failed to render pie chart");
 
-        // Word search
         document.getElementById('word-search-form').addEventListener('submit', function(e) {
             e.preventDefault();
             var word = document.getElementById('search-word').value;
@@ -172,7 +171,6 @@
             });
         });
 
-        // Text classification
         document.getElementById('text-classification-form').addEventListener('submit', function(e) {
             e.preventDefault();
             var text = document.getElementById('classify-text').value;

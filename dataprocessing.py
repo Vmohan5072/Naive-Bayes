@@ -21,16 +21,16 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# Ensure upload folder exists
+#Ensure upload folder exists
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 stemmer = PorterStemmer()
 
-# Set up logging
+#Set up logging
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
-# Mock user database
+#Mock user database
 users = {
     "admin": generate_password_hash("admin_password")
 }
@@ -161,17 +161,17 @@ def create_word_frequency_bar_chart(training_data, top_n=20):
 def sanitize_string(s):
     if not isinstance(s, str):
         return str(s)
-    # Remove unusable characters
+    #Remove unusable characters
     return re.sub(r'[\x00-\x1F\x7F-\x9F]', '', s)
 
 def create_scatter_plot(training_data):
     try:
-        # Filter out any rows with non-numeric data
+        #Remove non-numeric data
         numeric_data = training_data[training_data['Ham Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Ratio'].apply(lambda x: isinstance(x, (int, float)))]
         
-        # Convert to list and handle potential NaN values
+        #Convert to list and remove non valid characters
         x = numeric_data['Ham Count'].fillna(0).tolist()
         y = numeric_data['Spam Count'].fillna(0).tolist()
         text = [sanitize_string(word) for word in numeric_data['Word'].fillna('').tolist()]
@@ -201,16 +201,16 @@ def create_scatter_plot(training_data):
         fig = go.Figure(data=[trace], layout=layout)
         json_data = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
-        # Additional sanitization of the JSON string
+        #Additional sanitization of the JSON string
         json_data = sanitize_string(json_data)
         
-        # Check for potential issues in the JSON string
+        #Check for potential issues in the JSON string
         json.loads(json_data)  # This will raise an error if the JSON is invalid
         
         return json_data
     except Exception as e:
         app.logger.error(f"Error in create_scatter_plot: {e}")
-        # Return a simplified version of the chart if there's an error
+        #Return a simplified version of the chart if there's an error
         return json.dumps({
             "data": [{"x": [0], "y": [0], "type": "scatter", "mode": "markers"}],
             "layout": {"title": "Error in Scatter Plot"}
@@ -274,12 +274,11 @@ def index():
                     probability = round(probability, 3)
                     results.append((result, probability, file.filename))
 
-                    # Assume the true label is in the filename (e.g., "spam_email.txt" or "ham_email.txt")
                     true_label = 'spam' if 'spam' in file.filename.lower() else 'ham'
                     true_labels.append(true_label)
                     predicted_labels.append(result)
 
-            # Calculate accuracy metrics
+            #Calculate accuracy metrics
             precision, recall, f1 = evaluate_accuracy(true_labels, predicted_labels)
             accuracy_metrics = {
                 'precision': round(precision, 3),
@@ -287,10 +286,10 @@ def index():
                 'f1_score': round(f1, 3)
             }
 
-            # Log the classification activity
+            #Log the classification activity
             app.logger.info(f"{datetime.now()} - Classified {len(files)} emails. Accuracy metrics: {accuracy_metrics}")
 
-        # Create visualizations
+        #Create the three visualizations
         charts['word_frequency'] = create_word_frequency_bar_chart(training_data)
         charts['scatter_plot'] = create_scatter_plot(training_data)
         charts['pie_chart'] = create_pie_chart(training_data)
@@ -311,7 +310,7 @@ def search_word():
         result['Original Word'] = word  # Include the original word in the result
         return jsonify(result)
     
-    # If exact stem not found, search for words that contain the stemmed word
+    #If exact stem not found, search for words that contain the stemmed word
     containing_words = training_data[training_data['Word'].str.contains(stemmed_word, case=False, na=False)]
     if not containing_words.empty:
         results = containing_words.to_dict('records')
