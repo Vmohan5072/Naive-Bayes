@@ -166,7 +166,7 @@ def sanitize_string(s):
 
 def create_scatter_plot(training_data):
     try:
-        #Filter out any rows with non-numeric data
+        #Remove non-numeric data
         numeric_data = training_data[training_data['Ham Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Count'].apply(lambda x: isinstance(x, (int, float))) & 
                                      training_data['Spam Ratio'].apply(lambda x: isinstance(x, (int, float)))]
@@ -234,18 +234,9 @@ def create_pie_chart(training_data):
         return safe_json_dumps({"error": str(e)})
 
 def evaluate_accuracy(true_labels, predicted_labels):
-    if len(true_labels) == 0 or len(predicted_labels) == 0:
-        app.logger.error("No labels to evaluate accuracy")
-        return 0, 0, 0
-    
-    app.logger.info(f"True labels: {true_labels}")
-    app.logger.info(f"Predicted labels: {predicted_labels}")
-    
-    precision = precision_score(true_labels, predicted_labels, pos_label='spam', zero_division=0)
-    recall = recall_score(true_labels, predicted_labels, pos_label='spam', zero_division=0)
-    f1 = f1_score(true_labels, predicted_labels, pos_label='spam', zero_division=0)
-    
-    app.logger.info(f"Precision: {precision}, Recall: {recall}, F1: {f1}")
+    precision = precision_score(true_labels, predicted_labels, pos_label='spam')
+    recall = recall_score(true_labels, predicted_labels, pos_label='spam')
+    f1 = f1_score(true_labels, predicted_labels, pos_label='spam')
     return precision, recall, f1
 
 @app.route('/', methods=['GET', 'POST'])
@@ -272,49 +263,33 @@ def index():
 
             for file in files:
                 if file:
-                    # Create a temporary file
-                    with tempfile.NamedTemporaryFile(delete=False) as temp:
-                        file.save(temp.name)
-                        temp_path = temp.name
-
-                    # Process the temporary file
-                    with open(temp_path, 'r', encoding='latin-1') as f:
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+                    file.save(file_path)
+                    app.logger.info(f"File saved: {file_path}")
+                    with open(file_path, 'r', encoding='latin-1') as f:
                         email_text = f.read()
-                    
-                    # Delete the temporary file
-                    os.unlink(temp_path)
-
-                    app.logger.info(f"Processing file: {file.filename}")
                     app.logger.info(f"File content (first 100 chars): {email_text[:100]}")
                     
                     result, probability = classify_email(email_text, spam_probabilities, ham_probabilities, prior_spam, prior_ham)
                     probability = round(probability, 3)
                     results.append((result, probability, file.filename))
 
-                    # Determine true label from filename
                     true_label = 'spam' if 'spam' in file.filename.lower() else 'ham'
-                    app.logger.info(f"File: {file.filename}, True label: {true_label}, Predicted: {result}")
-                    
                     true_labels.append(true_label)
                     predicted_labels.append(result)
 
-            # Calculate accuracy metrics
-            if true_labels and predicted_labels:
-                precision, recall, f1 = evaluate_accuracy(true_labels, predicted_labels)
-                accuracy_metrics = {
-                    'precision': round(precision, 3),
-                    'recall': round(recall, 3),
-                    'f1_score': round(f1, 3)
-                }
-                app.logger.info(f"Accuracy metrics: {accuracy_metrics}")
-            else:
-                app.logger.error("No labels to calculate accuracy metrics")
-                accuracy_metrics = {'precision': 0, 'recall': 0, 'f1_score': 0}
+            #Calculate accuracy metrics
+            precision, recall, f1 = evaluate_accuracy(true_labels, predicted_labels)
+            accuracy_metrics = {
+                'precision': round(precision, 3),
+                'recall': round(recall, 3),
+                'f1_score': round(f1, 3)
+            }
 
-            # Log the classification activity
+            #Log the classification activity
             app.logger.info(f"{datetime.now()} - Classified {len(files)} emails. Accuracy metrics: {accuracy_metrics}")
 
-        # Create visualizations
+        #Create the three visualizations
         charts['word_frequency'] = create_word_frequency_bar_chart(training_data)
         charts['scatter_plot'] = create_scatter_plot(training_data)
         charts['pie_chart'] = create_pie_chart(training_data)
@@ -335,7 +310,7 @@ def search_word():
         result['Original Word'] = word  # Include the original word in the result
         return jsonify(result)
     
-    # If exact stem not found, search for words that contain the stemmed word
+    #If exact stem not found, search for words that contain the stemmed word
     containing_words = training_data[training_data['Word'].str.contains(stemmed_word, case=False, na=False)]
     if not containing_words.empty:
         results = containing_words.to_dict('records')
