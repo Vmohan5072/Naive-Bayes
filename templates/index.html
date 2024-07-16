@@ -74,17 +74,6 @@
         </div>
         {% endif %}
 
-        {% if accuracy_metrics %}
-        <div class="accuracy-metrics">
-            <h3>Accuracy Metrics:</h3>
-            <ul>
-                <li>Precision: {{ accuracy_metrics.precision }}</li>
-                <li>Recall: {{ accuracy_metrics.recall }}</li>
-                <li>F1 Score: {{ accuracy_metrics.f1_score }}</li>
-            </ul>
-        </div>
-        {% endif %}
-
         <h3>Classify Custom Text</h3>
         <form id="text-classification-form">
             <textarea id="classify-text" placeholder="Enter text to classify"></textarea>
